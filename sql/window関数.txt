@@ -1,0 +1,39 @@
+SELECT id
+       ,namae 
+       ,shurui
+       ,(baika-tanka) * hanbai_su AS rieki
+       ,RANK() OVER(PARTITION BY shurui
+                    ORDER     BY (baika-tanka)*hanbai_su DESC
+                    ) AS ranking
+FROM hanbai_list;
+
+目的は順位を付ける事なので、関数に RANK を指定。
+次に OVER句 の PARTITION BY でグループを shurui に指定、
+ORDER BY で計算するカラムを (baika-tanka)*hanbai_su と指定。
+DESC を付けて、数値の大きい順にするんだよと指定しています。
+
+id |    namae     | shurui | rieki | ranking 
+----+--------------+--------+-------+---------
+  5 | イヤホン     | 雑貨   |  2500 |       1
+  4 | スマホケース | 雑貨   |  1500 |       2
+  1 | えんぴつ     | 文房具 |   500 |       1
+  3 | じょうぎ     | 文房具 |   160 |       2
+  2 | 消しゴム     | 文房具 |   125 |       3
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+SELECT id
+       ,namae 
+       ,shurui
+       ,(baika-tanka)*hanbai_su AS rieki
+       ,RANK() OVER(ORDER BY (baika-tanka)*hanbai_su DESC) AS ranking
+FROM hanbai_list;
+
+id |    namae     | shurui | rieki | ranking 
+----+--------------+--------+-------+---------
+  5 | イヤホン     | 雑貨   |  2500 |       1
+  4 | スマホケース | 雑貨   |  1500 |       2
+  1 | えんぴつ     | 文房具 |   500 |       3
+  3 | じょうぎ     | 文房具 |   160 |       4
+  2 | 消しゴム     | 文房具 |   125 |       5
+

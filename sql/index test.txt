@@ -1,0 +1,25 @@
+■リスト9.1 OmitTblテーブルの定義
+CREATE TABLE OmitTbl
+(keycol CHAR(8) NOT NULL,
+ seq    INTEGER NOT NULL,
+ val    INTEGER ,
+  CONSTRAINT pk_OmitTbl PRIMARY KEY (keycol, seq));
+
+EXPLAIN select *
+from OmitTbl
+where keycol = 'A'
+and seq = '3'
+
+"QUERY PLAN"
+"Index Scan using pk_omittbl on omittbl  (cost=0.15..8.17 rows=1 width=44)"
+"  Index Cond: ((keycol = 'A'::bpchar) AND (seq = 3))"
+
+EXPLAIN select *
+from OmitTbl
+where seq = '4'
+and keycol = 'A'
+
+"QUERY PLAN"
+"Index Scan using pk_omittbl on omittbl  (cost=0.15..8.17 rows=1 width=44)"
+"  Index Cond: ((keycol = 'A'::bpchar) AND (seq = 4))"
+

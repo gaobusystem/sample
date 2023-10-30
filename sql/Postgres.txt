@@ -1,0 +1,743 @@
+services.msc
+
+EXPLAIN SELECT * FROM item;
+
+Server [localhost]:
+Database [postgres]:
+Port [5432]:
+Username [postgres]:
+Client Encoding [SJIS]:
+ユーザー postgres のパスワード:
+psql (16.0)
+"help"でヘルプを表示します。
+
+postgres=# \l
+
+
+psql を終了するには \q を入力した後に何かキーをタッチ
+
+create database sqltest;
+
+
+psql -U postgres -d sqltest
+
+\connect sqltest
+
+\dt テーブル一覧
+
+ミリ秒 【millisecond】 msec / ms
+
+1秒の1000分の1（0.001秒）
+
+マイクロ秒	1µs
+ナノ秒	1ns
+ピコ秒	1ps
+
+
+SELECT name
+  FROM Address
+ WHERE name IN (SELECT name -- INの中にサブクエリ
+                  FROM Address2);
+
+SELECT name, address,
+       CASE WHEN address = '東京都' THEN '関東'
+            WHEN address = '千葉県' THEN '関東'
+            WHEN address = '福島県' THEN '東北'
+            WHEN address = '三重県' THEN '中部'
+            WHEN address = '和歌山県' THEN '関西'
+            ELSE NULL END AS district
+  FROM Address;
+
+■リスト2.24 INTERSECTで積集合を求める
+SELECT *
+  FROM Address
+INTERSECT
+SELECT *
+  FROM Address2;
+
+＊どちらのテーブルを先にしても結果は同じ
+
+■リスト2.25 EXCEPTで差集合(引き算)を求める
+SELECT *
+  FROM Address
+EXCEPT
+SELECT *
+  FROM Address2;
+
+＊どちらのテーブルを先にするかで結果がことなる
+
+■リスト3.2 SELECT句における条件分岐
+SELECT item_name, year,
+       CASE WHEN year <= 2001 THEN price_tax_ex
+            WHEN year >= 2002 THEN price_tax_in END AS price
+  FROM Items;
+
+EXPLAIN SELECT * FROM item;
+
+
+■リスト3.6 SELECT句でCASE式を使う
+SELECT emp_name,
+       MAX(team) AS team
+  FROM Employees 
+ GROUP BY emp_name
+HAVING COUNT(*) = 1
+UNION
+SELECT emp_name,
+       '2つを兼務' AS team
+  FROM Employees 
+ GROUP BY emp_name
+HAVING COUNT(*) = 2
+UNION
+SELECT emp_name,
+       '3つ以上を兼務' AS team
+  FROM Employees 
+ GROUP BY emp_name
+HAVING COUNT(*) >= 3;
+
+SELECT emp_name,
+       CASE WHEN COUNT(*) = 1 THEN MAX(team)
+            WHEN COUNT(*) = 2 THEN '2つを兼務'
+            WHEN COUNT(*) >= 3 THEN '3つ以上を兼務'
+        END AS team
+  FROM Employees
+ GROUP BY emp_name;
+
+■リスト3.10 INによる解
+SELECT key, name,
+       date_1, flg_1,
+       date_2, flg_2,
+       date_3, flg_3
+  FROM ThreeElements
+ WHERE ('2013-11-01', 'T')
+         IN ((date_1, flg_1),
+             (date_2, flg_2),
+             (date_3, flg_3));
+
+
+SELECT key, name,
+       date_1, flg_1,
+       date_2, flg_2,
+       date_3, flg_3
+  FROM ThreeElements
+ WHERE CASE WHEN date_1 = '2013-11-01' THEN flg_1
+            WHEN date_2 = '2013-11-01' THEN flg_2
+            WHEN date_3 = '2013-11-01' THEN flg_3
+       ELSE NULL END = 'T';
+
+
+■リスト4.5 これが正解。どの実装でも通る
+SELECT id,
+       MAX(CASE WHEN data_type = 'A' THEN data_1 ELSE NULL END) AS data_1,
+       MAX(CASE WHEN data_type = 'A' THEN data_2 ELSE NULL END) AS data_2,
+       MAX(CASE WHEN data_type = 'B' THEN data_3 ELSE NULL END) AS data_3,
+       MAX(CASE WHEN data_type = 'B' THEN data_4 ELSE NULL END) AS data_4,
+       MAX(CASE WHEN data_type = 'B' THEN data_5 ELSE NULL END) AS data_5,
+       MAX(CASE WHEN data_type = 'C' THEN data_6 ELSE NULL END) AS data_6
+  FROM NonAggTbl
+ GROUP BY id;
+
+++++++++++++++++++++++++++++++++++++++++++++++++
+SELECT room_nbr,
+       end_date - start_date AS working_days
+  FROM HotelRooms
+
+101	5
+101	2
+101	3
+202	3
+202	3
+202	1
+303	14
+
+■複数レコードから稼働日数を算出する
+SELECT room_nbr,
+       SUM(end_date - start_date) AS working_days
+  FROM HotelRooms
+ GROUP BY room_nbr
+HAVING SUM(end_date - start_date) >= 10;
+
+"room_nbr"	"working_days"
+101	10
+303	14
+
+■頭文字のアルファベットごとに何人がテーブルに存在するか集計するSQL
+SELECT SUBSTRING(name, 1, 1) AS label,
+         COUNT(*)
+  FROM Persons
+ GROUP BY SUBSTRING(name, 1, 1);
+
+"label"	"count"
+"D"	3
+"B"	3
+"A"	2
+"C"	1
+
+■年齢による区分を実施
+SELECT CASE WHEN age < 20 THEN '子供'
+            WHEN age BETWEEN 20 AND 69 THEN '成人'
+            WHEN age >= 70 THEN '老人'
+       ELSE NULL END AS age_class,
+       COUNT(*)
+  FROM Persons
+ GROUP BY CASE WHEN age < 20 THEN '子供'
+               WHEN age BETWEEN 20 AND 69 THEN '成人'
+               WHEN age >= 70 THEN '老人'
+          ELSE NULL END;
+
+"age_class"	"count"
+"子供"	1
+"老人"	2
+"成人"	6
+
++++++++++++++++++++++++++++++++++++++++++++++++
+SELECT name,
+			weight / POWER(height /100, 2) as bmi,
+		CASE WHEN weight / POWER(height /100, 2) < 18.5 THEN 'やせ'
+            WHEN 18.5 <= weight / POWER(height /100, 2)
+                   AND weight / POWER(height /100, 2) < 25 THEN '標準'
+            WHEN 25 <= weight / POWER(height /100, 2) THEN '肥満'
+            ELSE NULL END AS bunrui
+  FROM Persons
+
+"name"	"bmi"	"bunrui"
+"Anderson"	25.46401086464464	"肥満"
+"Adela"	19.721036967980208	"標準"
+"Bates"	19.227687870533565	"標準"
+"Becky"	20.0177299894192	"標準"
+"Bill"	38.30316958728334	"肥満"
+"Chris"	15.673469387755102	"やせ"
+"Darwin"	21.484374999999996	"標準"
+"Dawson"	27.17063156623596	"肥満"
+"Donald"	17.110020661157026	"やせ"
+
+■BMIによる体重分類を求めるクエリ
+SELECT CASE WHEN weight / POWER(height /100, 2) < 18.5 THEN 'やせ'
+            WHEN 18.5 <= weight / POWER(height /100, 2)
+                   AND weight / POWER(height /100, 2) < 25 THEN '標準'
+            WHEN 25 <= weight / POWER(height /100, 2) THEN '肥満'
+            ELSE NULL END AS bmi,
+            COUNT(*)
+  FROM Persons
+ GROUP BY CASE WHEN weight / POWER(height /100, 2) < 18.5 THEN 'やせ'
+               WHEN 18.5 <= weight / POWER(height /100, 2)
+                   AND weight / POWER(height /100, 2) < 25 THEN '標準'
+               WHEN 25 <= weight / POWER(height /100, 2) THEN '肥満'
+               ELSE NULL END;
+
+"bmi"	"count"
+"肥満"	3
+"やせ"	2
+"標準"	4
+
+■PARTITION BYに式を入れてみる
+SELECT name,
+       age,
+       CASE WHEN age < 20 THEN '子供'
+            WHEN age BETWEEN 20 AND 69 THEN '成人'
+            WHEN age >= 70 THEN '老人'
+       ELSE NULL END AS age_class,
+       RANK() OVER(PARTITION BY CASE WHEN age < 20 THEN '子供'
+                                     WHEN age BETWEEN 20 AND 69 THEN '成人'
+                                     WHEN age >= 70 THEN '老人'
+                                ELSE NULL END
+                       ORDER BY age) AS age_rank_in_class
+  FROM Persons
+ ORDER BY age_class, age_rank_in_class;
+
+"name"	"age"	"age_class"	"age_rank_in_class"
+"Darwin"	12	"子供"	1
+"Adela"	21	"成人"	1
+"Dawson"	25	"成人"	2
+"Anderson"	30	"成人"	3
+"Donald"	30	"成人"	3
+"Bill"	39	"成人"	5
+"Becky"	54	"成人"	6
+"Bates"	87	"老人"	1
+"Chris"	90	"老人"	2
+
+■ぐるぐる系のコードを ウィンドウ関数を使った解
+INSERT INTO Sales2
+SELECT company,
+       year,
+       sale,
+       CASE SIGN(sale - MAX(sale)
+                         OVER ( PARTITION BY company
+                                    ORDER BY year
+                                     ROWS BETWEEN 1 PRECEDING
+                                              AND 1 PRECEDING) )
+       WHEN 0 THEN '='
+       WHEN 1 THEN '+'
+       WHEN -1 THEN '-'
+       ELSE NULL END AS var
+  FROM Sales;
+
+＊SIGNは数字を受け取って、マイナスなら-1、プラスなら1、0は0をかえす。
+＊ROWS BETWEEN 1 PRECEDING AND 1 PRECEDINGは、カレントレコードの１行前から１行前の範囲
+
+■リスト5.6 郵便番号のランキングを求めるクエリ
+SELECT pcode,
+       district_name,
+       CASE WHEN pcode = '4130033' THEN 0
+            WHEN pcode LIKE '413003%' THEN 1
+            WHEN pcode LIKE '41300%'  THEN 2
+            WHEN pcode LIKE '4130%'   THEN 3
+            WHEN pcode LIKE '413%'    THEN 4
+            WHEN pcode LIKE '41%'     THEN 5
+            WHEN pcode LIKE '4%'      THEN 6
+            ELSE NULL END AS rank
+  FROM PostalCode;
+
+"pcode"	"district_name"	"rank"
+"4130001"	"静岡県熱海市泉"	2
+"4130002"	"静岡県熱海市伊豆山"	2
+"4130103"	"静岡県熱海市網代"	3
+"4130041"	"静岡県熱海市青葉町"	2
+"4103213"	"静岡県伊豆市青羽根"	5
+"4380824"	"静岡県磐田市赤池"	6
+
+■最寄の郵便番号を求めるクエリ
+SELECT pcode,
+       district_name
+  FROM PostalCode
+ WHERE CASE WHEN pcode = '4130033' THEN 0
+            WHEN pcode LIKE '413003%' THEN 1
+            WHEN pcode LIKE '41300%'  THEN 2
+            WHEN pcode LIKE '4130%'   THEN 3
+            WHEN pcode LIKE '413%'    THEN 4
+            WHEN pcode LIKE '41%'     THEN 5
+            WHEN pcode LIKE '4%'      THEN 6
+            ELSE NULL END = 
+                (SELECT MIN(CASE WHEN pcode = '4130033' THEN 0
+                                 WHEN pcode LIKE '413003%' THEN 1
+                                 WHEN pcode LIKE '41300%'  THEN 2
+                                 WHEN pcode LIKE '4130%'   THEN 3
+                                 WHEN pcode LIKE '413%'    THEN 4
+                                 WHEN pcode LIKE '41%'     THEN 5
+                                 WHEN pcode LIKE '4%'      THEN 6
+                                 ELSE NULL END)
+                   FROM PostalCode);
+
+SELECT pcode,
+       district_name
+  FROM (SELECT pcode,
+               district_name,
+               CASE WHEN pcode = '4130033' THEN 0
+                    WHEN pcode LIKE '413003%' THEN 1
+                    WHEN pcode LIKE '41300%'  THEN 2
+                    WHEN pcode LIKE '4130%'   THEN 3
+                    WHEN pcode LIKE '413%'    THEN 4
+                    WHEN pcode LIKE '41%'     THEN 5
+                    WHEN pcode LIKE '4%'      THEN 6
+                    ELSE NULL END AS hit_code,
+               MIN(CASE WHEN pcode = '4130033' THEN 0
+                        WHEN pcode LIKE '413003%' THEN 1
+                        WHEN pcode LIKE '41300%'  THEN 2
+                        WHEN pcode LIKE '4130%'   THEN 3
+                        WHEN pcode LIKE '413%'    THEN 4
+                        WHEN pcode LIKE '41%'     THEN 5
+                        WHEN pcode LIKE '4%'      THEN 6
+                        ELSE NULL END) 
+                OVER(ORDER BY CASE WHEN pcode = '4130033' THEN 0
+                                   WHEN pcode LIKE '413003%' THEN 1
+                                   WHEN pcode LIKE '41300%'  THEN 2
+                                   WHEN pcode LIKE '4130%'   THEN 3
+                                   WHEN pcode LIKE '413%'    THEN 4
+                                   WHEN pcode LIKE '41%'     THEN 5
+                                   WHEN pcode LIKE '4%'      THEN 6
+                                   ELSE NULL END) AS min_code
+          FROM PostalCode) Foo
+ WHERE hit_code = min_code;
+
+■リスト5.10 一番古い住所を検索する（PostgreSQL）
+仮想テーブル再帰的な共通テーブル式
+自分自身を参照することで、前に行った処理の結果を利用して同じ処理を繰り返すことができる。
+WITH RECURSIVE Explosion (name, pcode, new_pcode, depth)
+AS
+(SELECT name, pcode, new_pcode, 1
+   FROM PostalHistory 
+  WHERE name = 'A'
+    AND new_pcode IS NULL -- 探索の開始点
+ UNION
+ SELECT Child.name, Child.pcode, Child.new_pcode, depth + 1
+   FROM Explosion AS Parent, PostalHistory AS Child
+  WHERE Parent.pcode = Child.new_pcode
+    AND Parent.name = Child.name)
+-- メインのSELECT文
+SELECT name, pcode, new_pcode
+  FROM Explosion
+ WHERE depth = (SELECT MAX(depth)
+                  FROM Explosion);
+
+
+■リスト5.11 一番古い住所を検索する（Oracle版）
+仮想テーブル再帰的な共通テーブル式
+自分自身を参照することで、前に行った処理の結果を利用して同じ処理を繰り返すことができる。
+WITH Explosion (name, pcode, new_pcode, depth)
+AS
+(SELECT name, pcode, new_pcode, 1
+   FROM PostalHistory
+  WHERE name = 'A'
+    AND new_pcode IS NULL -- 探索の開始点
+ UNION ALL
+ SELECT Child.name, Child.pcode, Child.new_pcode, depth + 1
+   FROM Explosion Parent, PostalHistory Child
+  WHERE Parent.pcode = Child.new_pcode
+    AND Parent.name = Child.name)
+-- メインのSELECT文
+SELECT name, pcode, new_pcode
+  FROM Explosion
+ WHERE depth = (SELECT MAX(depth)
+                  FROM Explosion);
+
+■リスト5.13 一番外側の円を求める
+SELECT name, pcode
+  FROM PostalHistory2 PH1
+ WHERE name = 'A'
+   AND NOT EXISTS 
+        (SELECT *
+           FROM PostalHistory2 PH2
+          WHERE PH2.name = 'A'
+            AND PH1.lft > PH2.lft);
+
+■サブクエリを使った解
+【ダメ】
+SELECT R1.cust_id, R1.seq, R1.price
+  FROM Receipts R1
+         INNER JOIN
+           (SELECT cust_id, MIN(seq) AS min_seq
+              FROM Receipts
+             GROUP BY cust_id) R2
+    ON R1.cust_id = R2.cust_id
+   AND R1.seq = R2.min_seq;
+
+【ダメ】
+相関サブクエリの解
+SELECT cust_id, seq, price
+  FROM Receipts R1
+ WHERE seq = (SELECT MIN(seq)
+                FROM Receipts R2
+               WHERE R1.cust_id = R2.cust_id);
+
+【改善】ウィンドウ関数による解
+SELECT cust_id, seq, price
+  FROM (SELECT cust_id, seq, price,
+               ROW_NUMBER()
+                 OVER (PARTITION BY cust_id
+                           ORDER BY seq) AS row_seq
+          FROM Receipts ) WORK
+ WHERE WORK.row_seq = 1;
+
+■リスト7.5 サブクエリ・パラノイア  患者2号
+SELECT TMP_MIN.cust_id,
+       TMP_MIN.price - TMP_MAX.price AS diff
+  FROM (SELECT R1.cust_id, R1.seq, R1.price
+          FROM Receipts R1
+                 INNER JOIN
+                  (SELECT cust_id, MIN(seq) AS min_seq
+                     FROM Receipts
+                    GROUP BY cust_id) R2
+            ON R1.cust_id = R2.cust_id
+           AND R1.seq = R2.min_seq) TMP_MIN
+       INNER JOIN
+       (SELECT R3.cust_id, R3.seq, R3.price
+          FROM Receipts R3
+                 INNER JOIN
+                  (SELECT cust_id, MAX(seq) AS min_seq
+                     FROM Receipts
+                    GROUP BY cust_id) R4
+            ON R3.cust_id = R4.cust_id
+           AND R3.seq = R4.min_seq) TMP_MAX
+    ON TMP_MIN.cust_id = TMP_MAX.cust_id;
+
+SELECT cust_id,
+       SUM(CASE WHEN min_seq = 1 THEN price ELSE 0 END)
+         - SUM(CASE WHEN max_seq = 1 THEN price ELSE 0 END) AS diff
+  FROM (SELECT cust_id, price,
+               ROW_NUMBER() OVER (PARTITION BY cust_id
+                                      ORDER BY seq) AS min_seq,
+               ROW_NUMBER() OVER (PARTITION BY cust_id
+                                      ORDER BY seq DESC) AS max_seq
+          FROM Receipts ) WORK
+ WHERE WORK.min_seq = 1
+    OR WORK.max_seq = 1
+ GROUP BY cust_id;
+■リスト7.9 解1：結合を先に行う
+SELECT C.co_cd, C.district,
+       SUM(emp_nbr) AS sum_emp
+  FROM Companies C
+         INNER JOIN
+           Shops S
+    ON C.co_cd = S.co_cd
+ WHERE main_flg = 'Y'
+ GROUP BY C.co_cd;
+
+
+■リスト7.10 解2：集約を先に行う
+SELECT C.co_cd, C.district, sum_emp
+  FROM Companies C
+         INNER JOIN
+          (SELECT co_cd,
+                  SUM(emp_nbr) AS sum_emp
+             FROM Shops
+            WHERE main_flg = 'Y'
+            GROUP BY co_cd) CSUM
+    ON C.co_cd = CSUM.co_cd;
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+■リスト8.2 主キーが1列の場合（ROW_NUMBER）
+SELECT student_id,
+       ROW_NUMBER() OVER (ORDER BY student_id) AS seq
+  FROM Weights;
+
+■リスト8.3 主キーが1列の場合（相関サブクエリ）
+SELECT student_id,
+       (SELECT COUNT(*)
+          FROM Weights W2
+         WHERE W2.student_id <= W1.student_id) AS seq
+  FROM Weights W1
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+■リスト8.7 クラスごとに連番を振る（ROW_NUMBER）
+SELECT class, student_id,
+       ROW_NUMBER() OVER (PARTITION BY class ORDER BY student_id) AS seq
+  FROM Weights2;
+
+
+■リスト8.8 クラスごとに連番を振る（相関サブクエリ）
+SELECT class, student_id,
+       (SELECT COUNT(*)
+          FROM Weights2 W2
+         WHERE W2.class = W1.class
+           AND W2.student_id <= W1.student_id) AS seq
+  FROM Weights2 W1;
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+■リスト8.10 連番の更新（ROW_NUMBER）
+UPDATE Weights3
+   SET seq = (SELECT seq
+                FROM (SELECT class, student_id,
+                             ROW_NUMBER()
+                               OVER (PARTITION BY class
+                                         ORDER BY student_id) AS seq
+                        FROM Weights3) SeqTbl
+             -- SeqTblというサブクエリを作る必要がある
+               WHERE Weights3.class = SeqTbl.class
+                 AND Weights3.student_id = SeqTbl.student_id);
+
+■リスト8.11 連番の更新（相関サブクエリ）
+UPDATE Weights3
+   SET seq = (SELECT COUNT(*)
+                FROM Weights3 W2
+               WHERE W2.class = Weights3.class
+                 AND W2.student_id <= Weights3.student_id);
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+■リスト8.12 メジアンを求める（集合指向型）：母集合を上位と下位に分割する Ｘ
+SELECT AVG(weight)
+  FROM (SELECT W1.weight
+          FROM Weights W1, Weights W2
+         GROUP BY W1.weight
+            --S1（下位集合）の条件
+        HAVING SUM(CASE WHEN W2.weight >= W1.weight THEN 1 ELSE 0 END)
+                  >= COUNT(*) / 2
+            --S2（上位集合）の条件
+           AND SUM(CASE WHEN W2.weight <= W1.weight THEN 1 ELSE 0 END)
+                  >= COUNT(*) / 2 ) TMP;
+
+■リスト8.13 メジアンを求める（手続き型）：両端から1行ずつ数えてぶつかった地点が「世界の中心」〇
+SELECT AVG(weight) AS median
+  FROM (SELECT weight,
+               ROW_NUMBER() OVER (ORDER BY weight ASC, student_id ASC) AS hi,
+               ROW_NUMBER() OVER (ORDER BY weight DESC, student_id DESC) AS lo
+          FROM Weights) TMP
+
+ WHERE hi IN (lo, lo +1 , lo -1);
+■リスト8.14 メジアンを求める（手続き型その2）：折り返し地点を見つける　〇
+SELECT AVG(weight)
+  FROM (SELECT weight,
+               2 * ROW_NUMBER() OVER(ORDER BY weight)
+                   - COUNT(*) OVER() AS diff
+          FROM Weights) TMP
+ WHERE diff BETWEEN 0 AND 2;
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+■リスト9.2 OmitTblのUPDATE文
+UPDATE OmitTbl
+   SET val = (SELECT val
+                FROM OmitTbl O1
+               WHERE O1.keycol = OmitTbl.keycol				
+                 AND O1.seq = (SELECT MAX(seq)
+                                FROM OmitTbl O2
+                               WHERE O2.keycol = OmitTbl.keycol
+                                 AND O2.seq < OmitTbl.seq    
+                                 AND O2.val IS NOT NULL))   
+ WHERE val IS NULL;
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+■リスト9.6 行→列の更新SQL：素直だけど非効率
+UPDATE ScoreCols
+   SET score_en = (SELECT score
+                     FROM ScoreRows SR
+                    WHERE SR.student_id = ScoreCols.student_id
+                      AND subject = '英語'),
+       score_nl = (SELECT score
+                     FROM ScoreRows SR
+                    WHERE SR.student_id = ScoreCols.student_id
+                      AND subject = '国語'),
+       score_mt = (SELECT score
+                     FROM ScoreRows SR
+                    WHERE SR.student_id = ScoreCols.student_id
+                      AND subject = '数学');
+
+■リスト9.7 より効率的なSQL：リスト機能の利用
+UPDATE ScoreCols
+   SET (score_en, score_nl, score_mt) --複数列をリスト化して一度で更新
+     = (SELECT MAX(CASE WHEN subject = '英語'
+                        THEN score
+                        ELSE NULL END) AS score_en,
+               MAX(CASE WHEN subject = '国語'
+                        THEN score
+                        ELSE NULL END) AS score_nl,
+               MAX(CASE WHEN subject = '数学'
+                        THEN score
+                        ELSE NULL END) AS score_mt
+          FROM ScoreRows SR
+          WHERE SR.student_id = ScoreCols.student_id);
+
+■リスト9.9 リスト9.6（1列ずつ更新）のNOT NULL制約対応
+UPDATE ScoreColsNN
+   SET score_en = COALESCE((SELECT score 
+                              FROM ScoreRows
+                             WHERE student_id = ScoreColsNN.student_id
+                               AND subject = '英語'), 0),
+       score_nl = COALESCE((SELECT score
+                              FROM ScoreRows
+                             WHERE student_id = ScoreColsNN.student_id
+                               AND subject = '国語'), 0),
+       score_mt = COALESCE((SELECT score
+                              FROM ScoreRows
+                             WHERE student_id = ScoreColsNN.student_id
+                               AND subject = '数学'), 0)
+ WHERE EXISTS (SELECT * 
+                 FROM ScoreRows
+                WHERE student_id = ScoreColsNN.student_id);
+
+■リスト9.10 リスト9.7（行式の利用）のNOT NULL制約対応
+UPDATE ScoreColsNN 
+   SET (score_en, score_nl, score_mt)
+          = (SELECT COALESCE(MAX(CASE WHEN subject = '英語'
+                                      THEN score
+                                      ELSE NULL END), 0) AS score_en,
+                    COALESCE(MAX(CASE WHEN subject = '国語'
+                                      THEN score
+                                      ELSE NULL END), 0) AS score_nl,
+                    COALESCE(MAX(CASE WHEN subject = '数学'
+                                      THEN score
+                                      ELSE NULL END), 0) AS score_mt
+               FROM ScoreRows SR
+              WHERE SR.student_id = ScoreColsNN.student_id)
+ WHERE EXISTS (SELECT * 
+                 FROM ScoreRows
+                WHERE student_id = ScoreColsNN.student_id);
+
+■リスト9.14 列→行の更新SQL
+UPDATE ScoreRows
+   SET score = (SELECT CASE ScoreRows.subject
+                       WHEN '英語' THEN score_en
+                       WHEN '国語' THEN score_nl
+                       WHEN '数学' THEN score_mt
+                       ELSE NULL END
+                  FROM ScoreCols
+                 WHERE student_id = ScoreRows.student_id);
+
+■リスト9.17 trend列を計算してINSERTする（相関サブクエリ）▲<-----  前のデータと比較
+INSERT INTO Stocks2
+SELECT brand, sale_date, price,
+       CASE SIGN(price -
+                   (SELECT price
+                      FROM Stocks S1
+                     WHERE brand = Stocks.brand
+                       AND sale_date =
+                            (SELECT MAX(sale_date)
+                               FROM Stocks S2
+                              WHERE brand = Stocks.brand
+                                AND sale_date < Stocks.sale_date)))
+            WHEN -1 THEN '↓'
+            WHEN 0 THEN '→'
+            WHEN 1 THEN '↑'
+            ELSE NULL
+       END
+  FROM Stocks;
+
+■リスト9.18 trend列を計算してINSERTする（ウィンドウ関数）〇<-----  前のデータと比較
+INSERT INTO Stocks2
+SELECT brand, sale_date, price,
+       CASE SIGN(price -
+                   MAX(price) OVER (PARTITION BY brand
+                                        ORDER BY sale_date
+                                    ROWS BETWEEN 1 PRECEDING
+                                             AND 1 PRECEDING))
+            WHEN -1 THEN '↓'
+            WHEN 0 THEN '→'
+            WHEN 1 THEN '↑'
+            ELSE NULL
+        END
+  FROM Stocks S2;
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+■ 受付日と配送予定日の差分
+SELECT O.order_id,
+       O.order_name,
+       ORC.delivery_date - O.order_date AS diff_days
+  FROM Orders O
+         INNER JOIN OrderReceipts ORC
+            ON O.order_id = ORC.order_id
+ WHERE ORC.delivery_date - O.order_date >= 3;
+
+■注文単位の集約
+SELECT O.order_id,
+       MAX(O.order_name),
+       MAX(ORC.delivery_date - O.order_date) AS max_diff_days
+  FROM Orders O
+         INNER JOIN OrderReceipts ORC
+            ON O.order_id = ORC.order_id
+ WHERE ORC.delivery_date - O.order_date >= 3
+ GROUP BY O.order_id;
+
+■リスト9.23 集約関数を使う
+SELECT O.order_id,
+       MAX(O.order_name) AS order_name,
+       MAX(O.order_date) AS order_date,
+       COUNT(*) AS item_count
+  FROM Orders O
+        INNER JOIN OrderReceipts ORC
+           ON O.order_id = ORC.order_id
+ GROUP BY O.order_id;
+
+
+■リスト9.24 ウィンドウ関数を使う
+SELECT O.order_id,
+       O.order_name,
+       O.order_date,
+       COUNT(*) OVER (PARTITION BY O.order_id) AS item_count
+  FROM Orders O
+       INNER JOIN OrderReceipts ORC
+          ON O.order_id = ORC.order_id;
+
+--------------indexが使われないケース---------------------------
+■絞り込みは効くが、インデックスが使えない検索条件
+SELECT order_id
+  FROM Orders
+ WHERE shop_name LIKE '%佐世保%';
+
+■索引列で演算を行っている
+ WHERE col_1 * 1.1 > 100      x
+
+ WHERE col_1  > 100 * 1.1     〇
+
+■is null述語を使っている
+
+ WHERE col_1 is null      x
+
+■否定形を使っている
+
+ WHERE col_1 <> 100      x
