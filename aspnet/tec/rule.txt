@@ -1,0 +1,518 @@
+・クラス（単数形）は同名のテーブル（複数形）にマッピングされる
+・主キーはid、または＜クラス名＞idという名前がデフォルト
+
+Plain Old CLR Object の略 (POCO) - プログラミング用語。継承等の複雑な機能に依らないプレーンなオブジェクト。
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+DbContext
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+using System.Data.Entity;
+
+  public class MvcBasicContext : DbContext
+  {
+    public DbSet<Member> Members { get; set; }
+  }
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+イニシャライザー　MvcBasicInitializer.cs
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+CreateDatabaseIfNotExists 	データベースが存在しない場合にのみ自動生成を行う
+DropCreateDatabaseAlways 	常にデータベースを再生成する
+DropCreateDatabaseAlways　モデルが変更されたとき
+
+  public class MvcBasicInitializer : DropCreateDatabaseAlways<MvcBasicContext>
+  {
+		 protected override void Seed(MvcBasicContext context)
+		    {
+		      var members = new List<Member> {
+		        new Member {
+		          Name = "山田リオ",
+		          Email = "rio@wings.msn.to",
+		          Birth = DateTime.Parse("1980-06-25"),
+		          Married = false,
+		          Memo = "ピアノが大好きです。"
+		        },
+		        new Member {
+		          Name = "鈴木恵子",
+		          Email = "keiko@wings.msn.to",
+		          Birth = DateTime.Parse("1984-11-23"),
+		          Married = true,
+		          Memo = "子どもと一緒にアニメを見るのが大好きです。"
+		        }
+		      };
+		      members.ForEach(m => context.Members.Add(m));
+		      context.SaveChanges();
+		    }
+
+Global.asax
+
+	Database.SetInitializer<MvcBasicContext>(new MvcBasicInitializer());
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+・データベースファースト
+・モデルファースト　デザイナ上で定義したEntity Data ModelからDB
+・コードファースト　POCOからDB
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+マイグレーション
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+・自動マイグレーション
+・コードベースマイグレーション　コマンドを都度実行
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ICollection
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+public virtual ICollection<Comment> Comments { get; set; }
+
+ICollectionは参照先テーブルの列を列挙
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+LINQ to Entities
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+遅延実行
+
+クエリー式構文
+　・シンプル
+	・すべての問い合わせを表現できない
+	・コンパイラーによりメソッド構文に置換される
+
+IEnumerable<int> filteringQuery =
+    from num in numbers
+    where num < 3 || num > 7
+    select num;
+
+
+メソッド構文
+	・冗長
+	・すべての機能を表現
+
+IEnumerable<int> largeNumbersQuery = numbers2.Where(c => c > 15);
+double average = numbers1.Average();
+articles = articles.Where(a => a.Released);;
+
+articles = articles.Where(a => a.Title.Contains(keyword));
+      var article = db.Articles.Single(
+        a => a.Url == "http://codezine.jp/article/corner/518");
+
+      var articles = from a in db.Articles
+                 orderby a.Published descending, a.Title
+                 select a;
+
+      var articles = db.Articles
+                 .OrderByDescending(a => a.Published)
+                 .ThenBy(a => a.Title);　　　＜－－－－　第二キー以降のソート
+
+      var articles = db.Articles
+                   .OrderByDescending(a => a.Published)
+                   .Select(a => new ArticleView
+                   {
+                     Title = a.Title.Substring(0, 10),
+                     Viewcount = (int)Math.Ceiling(a.Viewcount / 1000.0),
+                     Released = (a.Released ? "公開中" : "公開予定")
+                   });
+
+      var comments = db.Articles
+                       .Where(a => a.Category == CategoryEnum.Reference)
+                       .Select(a => a.Comments);
+
+			@foreach (var cs in Model){
+			  foreach (var c in cs) { 
+			    <li>@c.Body（@c.Name）</li>
+			  }
+			}
+
+      var comments = db.Articles
+                       .Where(a => a.Category == CategoryEnum.Reference)
+                       .SelectMany(a => a.Comments);
+
+			@foreach (var c in Model)
+			{
+			  <li>@c.Body（@c.Name）</li>
+			}
+
+      var comments = from a in db.Articles
+                     where a.Category == CategoryEnum.Reference
+                     from c in a.Comments
+                     select c;　　＜－－－－　SelectManyに変化される
+
+			@foreach (var c in Model)
+			{
+			  <li>@c.Body（@c.Name）</li>
+			}
+
+      var comments = db.Articles
+         .Where(a => a.Category == CategoryEnum.Reference)
+         .SelectMany(a => a.Comments
+         .Select(c => new ArticleCommentView { Title = a.Title, Body = c.Body })
+      );
+
+      // クエリー式構文
+      //var comments = from a in db.Articles
+      //  where a.Category == CategoryEnum.Reference
+      //  from c in a.Comments
+      //  select new ArticleCommentView { Title = a.Title, Body = c.Body };
+
+      var comments = (from c in db.Comments
+                      orderby c.Name
+                      select c.Name).Distinct();
+
+      var articles = (from a in db.Articles
+                      orderby a.Published descending
+                      select a).Skip(4).Take(3);
+
+      var pageSize = 3;
+      var pageNum = (id ?? 1) - 1;
+      var articles = (from a in db.Articles
+                      orderby a.Published descending
+                      select a).Skip(pageSize * pageNum).Take(pageSize);
+
+      var articles = (from a in db.Articles
+                      orderby a.Published descending
+                      select a).First();
+
+        var articles = (from a in db.Articles
+                  where a.Url == "http://nothing.org/"
+                  select a).FirstOrDefault();
+
+      var articles = from a in db.Articles
+                     group a by a.Category;
+      // メソッド構文
+      // var articles = db.Articles.GroupBy(a => a.Category);
+
+
+      var articles = from a in db.Articles
+                     group new ArticleLinkView { Url = a.Url, Title = a.Title }
+                     by a.Category;
+      // メソッド構文
+      // var articles = db.Articles.GroupBy(a => a.Category,
+      //   a => new ArticleLinkView { Url = a.Url, Title = a.Title });
+
+      var articles = from a in db.Articles
+                     group a by new ArticleGroup
+                     {
+                       Category = a.Category, Published = a.Published
+                     };
+      // メソッド構文
+      //var articles = db.Articles.
+      //    GroupBy(a => new ArticleGroup
+      //    {
+      //      Category = a.Category, Published = a.Published
+      //    });
+
+      return View(articles);
+
+        var articles = from a in db.Articles
+                       group a by a.Category into cgroup
+                       where cgroup.Average(a => a.Viewcount) > 10000
+                       select new ArticleHaving
+                       {
+                           Category = cgroup.Key,
+                           ViewAverage = cgroup.Average(a => a.Viewcount)
+                       };
+      // メソッド構文
+        //var articles = db.Articles.GroupBy(a => a.Category)
+        //    .Where(group => group.Average(a => a.Viewcount) > 10000)
+        //    .Select(group => new ArticleHaving
+        //    {
+        //      Category = group.Key,
+        //      ViewAverage = group.Average(a => a.Viewcount)
+        //    });
+
+      var articles = from a in db.Articles
+                     group a by a.Category into cgroup
+                     orderby cgroup.Key.ToString()
+                     select cgroup;
+      // メソッド構文
+      //var articles = db.Articles
+      //  .GroupBy(a => a.Category)
+      //  .OrderBy(group => group.Key.ToString());
+
+      var articles = from a in db.Articles
+                     join c in db.Comments on a equals c.Article
+                     select new ArticleCommentView
+                     {
+                       Title = a.Title,
+                       Body = c.Body
+                     };
+
+      //var articles = db.Articles
+      //                 .Join(db.Comments, a => a, c => c.Article,
+      //                  (a, c) => new ArticleCommentView
+      //                  {
+      //                    Title = a.Title, Body = c.Body
+      //                  });
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+＊新規
+      db.Comments.Add(new Comment
+      {
+        Name = "田中知子",
+        Body = "すごく丁寧に解説してあって、良かったです。",
+        Updated = DateTime.Parse("2015-01-10"),
+        Article = new Article
+        {
+          Title = "Visual Studioの使い方",
+          Category = CategoryEnum.DotNet,
+          Description = "初めて使う人でもわかるように、用語を中心に使い方を解説します。",
+          Viewcount = 1000,
+          Url = "http://www.wings.msn.to/vs",
+          Published = DateTime.Parse("2015-01-01"),
+          Released = true
+        }
+      });
+      db.SaveChanges();
+
+＊article既存　Comment追加
+      var article = db.Articles.Find(2);
+      db.Comments.Add(new Comment
+      {
+        Name = "林健太",
+        Body = "簡単にきれいなレイアウトができるので、面白かった。",
+        Updated = DateTime.Parse("2014-06-20"),
+        Article = article
+        // ArticleId = 2
+      });
+      db.SaveChanges();
+
+＊article既存　Comment既存
+
+ 			var article = db.Articles.Find(3);
+      var comment = db.Comments.Find(2);
+      comment.Article = article;
+      db.SaveChanges();
+
+      /* 同じ意味のものを外部キーで表すと...
+      var comment = db.Comments.Find(2);
+      comment.ArticleId = 3;
+      db.SaveChanges();
+      */
+
+＊article削除　Comment削除
+      var a = db.Articles.Find(1);
+      var comms = a.Comments;
+      db.Articles.Remove(a);
+      db.SaveChanges();
+
+
+      var articles = db.Database.SqlQuery<Article>("SELECT * FROM Articles;");
+
+      int cnt = db.Database.ExecuteSqlCommand(
+        "DELETE FROM Articles WHERE id={0}", id);
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+トランザクション
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+SaveChangesを呼び出せば、commit
+
+    public ActionResult Transaction()
+    {
+      db.Articles.Add(
+         new Article()
+         {
+           Url = "http://www.wings.msn.to/asp",
+           Title = "はじめてのASP.NET",
+           Category = CategoryEnum.DotNet,
+           Description = "ASP.NETに初めて触る人のための入門記事です。",
+           Viewcount = 1000,
+           Published = DateTime.Parse("2014-09-25"),
+           Released = true
+         }
+      );
+      db.Articles.Add(
+         new Article()
+         {
+           Url = "http://www.wings.msn.to/phpref",
+           Title = "厳選PHPリファレンス",
+           Category = CategoryEnum.Reference,
+           Description = "よく使うものを選んだPHPのリファレンスです。",
+           Viewcount = 1000,
+           //Published = DateTime.Parse("2014-10-01"),
+           Released = true
+         }
+      );
+
+      db.SaveChanges();
+      return Content("追加しました。");
+    }
+
+＊明示的kなトランザクション
+
+    public ActionResult Transaction2()
+    {
+      using (var tx = db.Database.BeginTransaction())
+      {
+        try
+        {
+          db.Articles.Add(
+             new Article()
+             {
+               Url = "http://www.wings.msn.to/asp",
+               Title = "はじめてのASP.NET",
+               Category = CategoryEnum.DotNet,
+               Description = "ASP.NETに初めて触る人のための入門記事です。",
+               Viewcount = 1000,
+               Published = DateTime.Parse("2014-09-25"),
+               Released = true
+             }
+          );
+          db.SaveChanges();
+
+          db.Database.ExecuteSqlCommand("INSERT INTO Articles(Url, Title, Category, Description, Viewcount, Published, Released) VALUES({0}, {1}, {2}, {3}, {4}, {5}, {6})", "http://www.wings.msn.to/phpref", "厳選PHPリファレンス", 0, "よく使うものを選んだPHPのリファレンスです。", 1000, "2014-10-01", true);
+          tx.Commit();
+          return Content("成功しました。");
+
+        }
+        catch (Exception e)
+        {
+          tx.Rollback();
+          return Content("失敗しました。");
+        }
+
+      }
+    }
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+同時更新制御
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  public class Article
+  {
+
+    //[Timestamp]
+    //public Byte[] Timestamp { get; set; }
+
+
+Edit.cshtml
+
+    @Html.AntiForgeryToken()
+    @@Html.HiddenFor(Model => Model.Timestamp)@
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public ActionResult Edit([Bind(Include = "Id,Url,Title,Category,Description,Viewcount,Published,Released")] Article article)
+    // public ActionResult Edit([Bind(Include = "Id,Url,Title,Category,Description,Viewcount,Published,Released,Timestamp")] Article article)
+    {
+      try
+      {
+        if (ModelState.IsValid)
+        {
+          db.Entry(article).State = EntityState.Modified;
+          db.SaveChanges();
+          return RedirectToAction("Index");
+        }
+      }
+      catch (DbUpdateConcurrencyException e)
+      {
+        ModelState.AddModelError(string.Empty, "更新の競合が検出されました。");
+      }
+      return View(article);
+    }
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+メールアドレス入力チェック
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+*model
+    [DisplayName("メールアドレス")]
+    [EmailAddress(ErrorMessage = "メールアドレスの形式で入力してください")]
+    public string Email { get; set; }
+
+    //[DisplayName("メールアドレス（確認）")]
+    //[NotMapped]
+    //[Compare("Email", ErrorMessage = "{1}と一致していません。")]
+    //public string EmailConfirmed { get; set; }
+
+*view
+        @*<div class="form-group">
+          @Html.LabelFor(model => model.EmailConfirmed, htmlAttributes: new { @class = "control-label col-md-2" })
+          <div class="col-md-10">
+            @Html.EditorFor(model => model.EmailConfirmed, new { htmlAttributes = new { @class = "form-control" } })
+            @Html.ValidationMessageFor(model => model.EmailConfirmed, "", new { @class = "text-danger" })
+          </div>
+        </div>*@
+
+*controller
+        public ActionResult Create([Bind(Include = "Id,Name,Email,EmailConfirmed,Birth,Married,Memo")] Member member)
+				メールアドレス入力チェlt苦をコーディング
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+独自検証ルール
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  public class Member : IValidatableObject
+  {
+    [DisplayName("自己紹介")]
+    [StringLength(100, ErrorMessage = "{0}は{1}文字以内で入力してください。")]
+    [CustomValidation(typeof(Member), "CheckBlackword")]
+    [Blackword("違法,麻薬,毒")] 
+    //public static ValidationResult CheckBlackword(string memo) {
+    
+    //  string[] list = new string[] { "違法", "麻薬", "毒" };
+    //  foreach (var data in list)
+    //  {
+    //    if (memo.Contains(data))
+    //    {
+    //      return new ValidationResult("NGワードが含まれています。");
+    //    }
+    //  }
+    //  return ValidationResult.Success;
+    //}
+
+
+
+複数のプロパティにまたがる検証
+
+  [CustomValidation(typeof(Member), "CheckMarriedAndEmail")] 
+
+  public class Member : IValidatableObject
+  {
+
+    //public static ValidationResult CheckMarriedAndEmail(Member m)
+    //{ 
+    //  if (m.Married && m.Email == null) 
+    //  {
+    //    return new ValidationResult("既婚者はメールアドレスを入力してください。");
+    //  }
+    //  return ValidationResult.Success; 
+    //}
+
+別の例
+      public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+      {
+        if (Married && Email == null) 
+        {
+          yield return new ValidationResult("既婚者はメールアドレスを入力してください。");
+          //yield return new ValidationResult("既婚者はメールアドレスを入力してください。", new [] { "Email" });
+        }
+      }
+
+＊よく使うものをExtensionsにまとめる
+
+　　　BlackwordAttribute.cs
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+値のプロバイダー自作　例）クッキー
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Extensions\HttpCookieValueProviderFactory.cs
+
+  public class HttpCookieValueProviderFactory : ValueProviderFactory
+  {
+    public override IValueProvider GetValueProvider(
+      ControllerContext controllerContext)
+    {
+      var list = new NameValueCollection();
+
+      var cookies = controllerContext.HttpContext.Request.Cookies;
+      foreach (var key in cookies.AllKeys)
+      {
+        list.Add(key, cookies[key].Value);
+      }
+
+      return new NameValueCollectionValueProvider(
+        list, CultureInfo.CurrentCulture);
+    }
+  }
+
+Global.asaxに登録が必要
+            ValueProviderFactories.Factories.Add(new HttpCookieValueProviderFactory());

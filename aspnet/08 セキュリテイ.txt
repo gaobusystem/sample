@@ -1,0 +1,39 @@
++++++++++++++++++++++
+ハッシュ化
+++++++++++++++++++++
+ string hash = this.GeneratePasswordHash(username, password);
+
+        public string GeneratePasswordHash(string username, string password)
+        {
+            string rawSalt = $"secret_{username}";
+            var sha256 = new SHA256CryptoServiceProvider();
+            var salt = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(rawSalt));
+
+            var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000);
+            var hash = pbkdf2.GetBytes(32);
+
+            return Convert.ToBase64String(hash);
+
++++++++++++++++++++++
+フィルタ属性
+++++++++++++++++++++
+ValidateAntiForgeryToken　CSRF対策を有効化
+	<%=Html.AntiForgeryToken() %>を埋め込む
+
+[ValidateInput(false)]　HTMLタグ入力OK
+
++++++++++++++++++++++
+ASP.NETのフォーム認証
+++++++++++++++++++++
+    <authentication mode="Forms">
+      <forms loginUrl="Login.aspx" timeout="10">
+      </forms>
+    </authentication>
+
++++++++++++++++++++++
+
+++++++++++++++++++++
+
+オーバーポスティング攻撃
+	post項目に勝手に追加
+

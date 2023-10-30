@@ -1,0 +1,91 @@
+code first
+
+データ構造を定義したクラス(POCO)をもとに、
+Entity Frameworkが必要なテーブルを作成
+
+
++++++++++++++++++++++
+ログイン
+++++++++++++++++++++
+
+admin/password
+
+
+
++++++++++++++++++++++
+住所録 databas first
+++++++++++++++++++++
+(localdb)\MSSQLLocalDB
+AddressBookInfo
+
+
+nuget
+	EntityFramework 6.20を追加
+	EntityFramework.ja 6.20を追加
+
+_LayoutPage1を追加
+	viewを右クリック
+	追加
+	MVCレイアウトページ(Razor)
+
+nuget
+	bootstrap3.4.1を追加
+
+コントローラーを追加
+	Entity Frameworkを使用したビューがあるMVC5コントローラー　
+	
+
+databas first
+	MODELフォルダ右クリック
+	追加＞＞新しい項目
+	データ選択>>ADO.NEt entity data model
+	データベースからEF Design
+	続く・・・・
+
+メタデータクラス
+
+
++++++++++++++++++++++
+入力制限
+++++++++++++++++++++
+
+    [DisplayName("氏名")]
+    [Required]
+    public string Name { get; set; }
+
+    [DisplayName("カナ")]
+    [Required]
+    [RegularExpression(@"[ァ-ヶ]+")]
+    public string Kana { get; set; }
+
+    [DisplayName("郵便番号")]
+    [RegularExpression(@"[0-9]+")]
+    [StringLength(7)]
+    public string ZipCode { get; set; }
+
+    [DisplayName("都道府県")]
+    public string Prefecture { get; set; }
+
+    [DisplayName("住所")]
+    public string StreetAddress { get; set; }
+
+    [DisplayName("電話番号")]
+    [RegularExpression(@"[0-9]+")]
+    [StringLength(11)]
+    public string Telephone { get; set; }
+
+    [DisplayName("メール")]
+    [DataType(DataType.EmailAddress)]
+    public string Mail { get; set; }
+
++++++++++++++++++++++
+疑似個人情報生成データ
+++++++++++++++++++++
+https://hogehoge.tk/personal/
+
+nuget
+	CsvHelperを追加
+
++++++++++++++++++++++
+
+++++++++++++++++++++

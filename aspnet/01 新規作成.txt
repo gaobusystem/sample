@@ -1,0 +1,24 @@
+++++++++++++++++++++++
+nuget
+++++++++++++++++++++++
+EntityFrameworkを追加
+	EntityFramework 6.20を追加
+	EntityFramework.ja 6.20を追加
+
++++++++++++++++++++++
+bootstrap
+++++++++++++++++++++
+nuget
+
++++++++++++++++++++++
+初期ページの設定
++++++++++++++++++++
+App_Start
+	RouteConfig.cs
+
+    defaults: new { controller = "Todoes", action = "Index", id = UrlParameter.Optional }
+
+
+http://localhost:44317/Todoes/
+
+

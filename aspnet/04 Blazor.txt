@@ -1,0 +1,384 @@
++++++++++++++++++++++
+コメント
+++++++++++++++++++++
+
+@*
+xdiqwdiqjijqij
+*@
+
++++++++++++++++++++++
+ビューの追加
+++++++++++++++++++++
+public ActionResult Index()の「index」を右クリックメニューで
+「ビューの追加」
+
+ビュー名：index
+テンプレート：Create
+モデルクラス：LoginViewModel(TodoApp.Models)
+データコンテキストクラス：なし
++++++++++++++++++++++
+レイアウトの指定
+++++++++++++++++++++
+@{
+    Layout = "~/Views/Shared/_ChildLayout.cshtml";
+}
+@{
+    Layout = null;
+}
++++++++++++++++++++++
+基礎
+++++++++++++++++++++
+@model IEnumerable<MvcBasic.Models.Member>
+@foreach (var item in Model) {
+    <tr>
+        <td>
+            @Html.DisplayFor(modelItem => item.Name)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.Email)
+        </td>
+        <td>
+            @Html.ActionLink("Edit", "Edit", new { id=item.Id }) |
+            @Html.ActionLink("Details", "Details", new { id=item.Id }) |
+            @Html.ActionLink("Delete", "Delete", new { id=item.Id })
+        </td>
+    </tr>
+}
+
+
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+
+@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+　　↓
+<input name="__RequestVerificationToken" type="hidden" value="nM8s_hGPD92B1HqQ5sUxXX89sK0Ra7GZU44mlus8Un66oUSQyP0wLBg3OgqN5OeaEy8vtSyMth-bR7N_osR_ymvQ6BVXknvDeSlkxUMJ1zg1" />
+
+
+@Html.HiddenFor(model => model.Id)
+　　↓
+<input data-val="true" data-val-number="フィールド Id には数字を指定してください。" data-val-required="Id フィールドが必要です。" id="Id" name="Id" type="hidden" value="3" />
+
+
+@Html.LabelFor(model => model.Summary, htmlAttributes: new { @class = "control-label col-md-2" })
+　　↓
+<label class="control-label col-md-2" for="Summary">概要</label>
+
+
+@Html.EditorFor(model => model.Summary, new { htmlAttributes = new { @class = "form-control" } })
+　　↓
+<input class="form-control text-box single-line" id="Summary" name="Summary" type="text" value="tesut" />
+
+
+@Html.ValidationMessageFor(model => model.Summary, "", new { @class = "text-danger" })
+　　↓
+<span class="field-validation-valid text-danger" data-valmsg-for="Summary" data-valmsg-replace="true"></span>
+
+
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+@Html.ActionLink("Create New", "Create")
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+<form action="/Todoes/Create" method="post">
+
+<input name="__RequestVerificationToken" type="hidden" 
+value="-Zp3xE4oeSWoiOb0zEY9emxQamr9u9AH8LgMrODURTvTgjvEP2S8hG03k9btkChXHqQT0UTwg3cR0beuGkvcZDMSstlv48PuJXuo7YvubMI1" />
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+link
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@Html.ActionLink("Back to List", "Index")
+　　↓
+<a href="/">Back to List</a>
+
+@Html.ActionLink("Edit", "Edit", new { id=item.Id }) |
+@Html.ActionLink("Details", "Details", new { id=item.Id }) |
+@Html.ActionLink("Delete", "Delete", new { id=item.Id })
+　　↓
+<a href="/Users/Edit/1">Edit</a> |
+<a href="/Users/Details/1">Details</a> |
+<a href="/Users/Delete/1">Delete</a>
+
+
++++++++++++++++++++++
+フィルターアクション
+++++++++++++++++++++
+    <div class="col-md-10">
+        @Html.EditorFor(model => model.CategoryName, new { htmlAttributes = new { @class = "form-control", list = "categories" } })
+        @Html.ValidationMessageFor(model => model.CategoryName, "", new { @class = "text-danger" })
+
+        <datalist id="categories">
+            @{ 
+                var categories = (List<Category>)ViewBag.Categories;
+                foreach(var item in categories)
+                {
+                    <option>@Html.DisplayFor(modelItem => item.CategoryName)</option>
+                }
+            }
+        </datalist>
+    </div>
+
++++++++++++++++++++++
+ViewBag ViewData TempData(セッション)
+++++++++++++++++++++
+
+namespace System.Web.Mvc
+{
+    // 略
+    public dynamic ViewBag { get; }
+    public ViewDataDictionary ViewData { get; set; }
+    // 略
+}
+
+// Controller
+public ActionResult Index()
+{
+    ViewData["Message1"] = "負けたくないことに理由っている？";
+    ViewBag.Message2     = "今までのぜんぶ・・・全部無駄だったみたいに言うな！！";
+    return View();
+}
+
+// View
+@ViewData["Message1"]  // -> 負けたくないことに理由っている？
+@ViewBag.Message2      // -> 今までのぜんぶ・・・全部無駄だったみたいに言うな！！
+
+
+// Controller
+public ActionResult Index()
+{
+    TempData["Message3"] = "プライド以外に何が要るんだ！！！";
+    return RedirectToAction("About");
+}
+// View
+// 値を保持しないで取り出す（次回以降リクエストでは取得不可）
+@TempData["Message3"]       // -> プライド以外に何が要るんだ！！！
+
+// 値は保持したまま取り出す（次回以降リクエストでも取得可）
+@TempData.Peek("Message3")  // -> プライド以外に何が要るんだ！！！
+
++++++++++++++++++++++
+Select
+++++++++++++++++++++
+        public ActionResult Select()
+        {
+          ViewBag.SelectOptions = new SelectListItem[] {
+            new SelectListItem() { Value="jQuery Tips", Text="jQuery Tips" },
+            new SelectListItem() { Value="jQueryリファレンス", Text="jQueryリファレンス" },
+            new SelectListItem() { Value="jQueryサンプル集", Text="jQueryサンプル集" }
+          };
+          ViewBag.ListOptions = new SelectListItem[] {
+            new SelectListItem() { Value="絶品！", Text="絶品！" },
+            new SelectListItem() { Value="面白かった", Text="面白かった" },
+            new SelectListItem() { Value="可もなく不可もなく", Text="可もなく不可もなく" },
+            new SelectListItem() { Value="イマイチ！", Text="イマイチ！" }
+          };
+          return View();
+        }
+
+    選択ボックス：
+    @Html.DropDownListFor(
+      model => model.Title,
+      (IEnumerable<SelectListItem>)ViewBag.SelectOptions,
+      "選択してください",
+      new { @class = "title_list" }
+    ) <br />
+
+    リストボックス：マルチ選択可
+    @Html.ListBoxFor(
+              model => model.Comments,
+        (IEnumerable<SelectListItem>)ViewBag.ListOptions,
+        new { @class = "comment_list" }
+    ) <br />
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+SelectEnum
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  public enum CategoryEnum
+  {
+    [Display(Name = ".NET")]
+    DotNet,
+
+    [Display(Name = "クラウド")]
+    Cloud,
+
+    [Display(Name = "リファレンス")]
+    Reference
+  }
+
+        public ActionResult SelectEnum()
+        {
+            Article article = db.Articles.Find(1);
+            return View(article);
+        }
+
+    カテゴリー：
+    @Html.EnumDropDownListFor(model => model.Category)
+    <br />
+
+    カテゴリー：
+    @Html.DropDownListFor(
+        model=>model.Category,
+        EnumHelper.GetSelectList(typeof(MvcView.Models.CategoryEnum))
+    )
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+SelectEnum
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      public ActionResult SelectGroup()
+      {
+        var articles = from a in db.Articles
+                       select new { Url = a.Url, Title = a.Title,
+                         Category = a.Category };
+        var disabled = from a in db.Articles
+                       where a.Released == false
+                       select a.Url;
+
+        ViewBag.Opts = new SelectList(
+          articles, "Url", "Title", "Category", null, disabled);
+        return View(db.Articles.Find(1));
+      }
+
+<h2>SelectGroup</h2>
+
+@Html.DropDownListFor(model => model.Url,
+  (SelectList)ViewBag.Opts, "選択してください")
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Link
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@Html.ActionLink(
+  "詳細",
+  "Details",
+  "Result",
+  new { id = "980-NI-05038-8", charset = "utf8" },
+  new { tabindex = 1 }
+)
+
+@Html.ActionLink(
+  "詳細",
+  "Details",
+  "Result",
+  "https",
+  "www.wings.msn.to",
+  "memo",
+  new { id = "980-NI-05038-8" },
+  new { tabindex = 1 }
+)
+
+@Html.RouteLink(
+  "詳細",
+  new { controller = "Result", Action = "Details",
+    id = "980-NI-05038-8", charset = "utf8" },
+  new { tabindex = 1 }
+)
+
+@Url.Content("~/Content/Site.css") <br />
+
+@*<img src="~/Content/hoge.gif" alt="サンプル画像" /> <br />
+<img src="@Url.Content("~/Content/hoge.gif")" alt="サンプル画像" /><br />*@
+
+@Url.Action(
+  "Details",
+  "Result",
+  new { id = "980-NI-05038-8", charset = "utf8" }
+)
+
+@Url.RouteUrl(
+  "Default",
+  new { controller = "Result", Action = "Details",
+    id = "980-NI-05038-8", charset = "utf8" }
+)
+
+@Url.RouteUrl("Default")
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Raw
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@{ ViewBag.SampleString = "That's 'All' Right, \"little\" Tom!<br />"; }
+@Html.Raw(ViewBag.SampleString)
+
+@Html.Raw(Html.Encode(ViewBag.SampleString))
+@Html.Raw(Html.AttributeEncode(ViewBag.SampleString))
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+自作ビューヘルパー　　\Helpers
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+＊戻り値はstring でなく、IHtmlString（HTMLエンコード済み）
+
+・拡張メソッド
+・TagBuilder
+
+ public static class MyHelper
+  {
+    public static IHtmlString Mailto(String address, String linktext)
+    {
+      return MvcHtmlString.Create(
+        String.Format("<a href=\"mailto:{0}\">{1}</a>",
+          HttpUtility.HtmlAttributeEncode(address),
+          HttpUtility.HtmlAttributeEncode(linktext)));
+    }
+
+    public static IHtmlString Image(this HtmlHelper helper, String src, String alt)
+    {
+      return MvcHtmlString.Create(
+        String.Format("<img src=\"{0}\" alt=\"{1}\" />",
+        HttpUtility.HtmlAttributeEncode(
+          UrlHelper.GenerateContentUrl(src, helper.ViewContext.HttpContext)),
+        HttpUtility.HtmlAttributeEncode(alt)));
+    }
+
+    public static IHtmlString Video(
+    this HtmlHelper helper, String src, Object htmlAttrs)
+    {
+      var builder = new TagBuilder("video");
+      builder.MergeAttribute("src",
+        UrlHelper.GenerateContentUrl(src, helper.ViewContext.HttpContext));
+      builder.MergeAttribute("controls", "controls");
+      builder.MergeAttributes(HtmlHelper.AnonymousObjectToHtmlAttributes(htmlAttrs));
+      return MvcHtmlString.Create(builder.ToString(TagRenderMode.Normal));
+    }
+
+    public static IHtmlString RadioButtonListFor<TModel, TProperty>(
+      this HtmlHelper<TModel> helper, Expression<Func<TModel, TProperty>> exp,
+      IEnumerable<SelectListItem> list, Object htmlAttrs)
+    {
+      var sb = new StringBuilder();
+      var name = helper.ViewContext.ViewData.TemplateInfo.GetFullHtmlFieldName(
+          ExpressionHelper.GetExpressionText(exp));
+      var value = ModelMetadata.FromLambdaExpression(exp, helper.ViewData).Model.ToString();
+
+      int i = 1;
+      foreach (var item in list)
+      {
+        var id = String.Format("{0}_{1}", name, i++);
+
+        var label = new TagBuilder("label");
+        label.MergeAttributes(
+          HtmlHelper.AnonymousObjectToHtmlAttributes(htmlAttrs));
+        label.InnerHtml = helper.RadioButton(name, item.Value, (item.Value == value), new { id = id }).ToString();
+        label.InnerHtml += item.Text;
+        sb.Append(label.ToString(TagRenderMode.Normal));
+      }
+
+      return MvcHtmlString.Create(sb.ToString());
+    }
+
+    public static IHtmlString TemplatedMessage(this HtmlHelper helper, Func<string, HelperResult> template, string message)
+    {
+      return template(message);
+    }
+
+
+@Html.TemplatedMessage(@<h3>@item</h3>, "テンプレートメッセージ")
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+部分ビュー　ユーザーコントロールに相当
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+@Html.Partial("_MemberPartital",Model)  部分ビュー呼び出し
+

@@ -1,0 +1,43 @@
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ルートパラメーターをすべて取得
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[
+      public ActionResult Test()
+      {
+        var builder = new StringBuilder();
+        foreach (var d in RouteData.Values)
+        {
+          builder.Append(
+            String.Format("{0}：{1}<br />", d.Key, d.Value));
+        }
+        return Content(builder.ToString());
+      }
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+category?取得
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[
+        [Route("Attr/Articles/{category?}")]
+        public ActionResult ShowByCategory(string category)
+        {
+          var list = from a in db.Articles
+                     select a;
+          if (category != null)
+          {
+            var c = (CategoryEnum)Enum.Parse(typeof(CategoryEnum), category);
+            list = list.Where(a => a.Category == c);
+          }
+          return View(list);
+        }
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+制約条件を設定　p385
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[
+      [Route("Blog/{day}/{month}/{year}")]
+      //[Route("Blog/{day:range(1, 31)}/{month:range(1, 12)}/{year:min(2010)}")]
+      //[Route("Blog/{day:min(1):max(31)}/{month:range(1, 12)}/{year:min(2010)}")]
+      public ActionResult Show(int day, int month, int year)
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+エリア作成　ｐ390
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[
+コンテキストメニュー＞＞追加＞＞エリア
+

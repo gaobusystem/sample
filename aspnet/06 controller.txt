@@ -1,0 +1,363 @@
++++++++++++++++++++++
+return
+++++++++++++++++++++
+ return View(article);
+
+ return View();
+
+ return Redirect("http://www.wings.msn.to/");
+
+ return RedirectToAction("Index");
+
+  //return Redirect("~/Members/Index");
+  return RedirectToAction("Index", "Members");
+
+  //return RedirectToAction("Details", "Members",
+  //  new { id = "1", charset = "utf8" });
+
+  return RedirectToRoute("Default",
+    new { controller = "Members", action = "Details",
+      id = 1, charset = "utf8" });
+
+ return RedirectToAction("Details", new { id = comment.ArticleId })
+
+  return HttpNotFound();
+
+  return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+
+  return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
+
+
+  return new EmptyResult();
+
+  return Content("こんにちは、世界！", "text/plain");
+
+  //return Content("こんにちは、世界！",
+  //  System.Net.Mime.MediaTypeNames.Text.Plain);
+
+  //return Content("こんにちは、世界！");
+
+//  return "こんにちは、世界！";
+
+	tab区切りをｃｓｖ出力
+  var members = db.Members.ToList();
+  var str = new StringBuilder();
+  members.ForEach(m =>
+      str.Append(
+          String.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\r\n",
+              m.Id,
+              m.Name,
+              m.Email,
+              m.Birth.ToString("d"),
+              m.Married,
+              m.Memo.Replace("\r\n", "")
+          )));
+  //Response.AddHeader("Content-Disposition", "attachment;filename=sample.txt");
+  return Content(str.ToString(),
+      "text/tab-separated-values",
+      Encoding.GetEncoding("Shift_JIS"));
++++++++++++++++++++++
+fillter
+++++++++++++++++++++
+
+    [CategoryFilter]
+
+    [AllowAnonymous]
+
+    [Authorize(Roles = "Owners")]
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+
+    [HttpPost, ActionName("Delete")]
+
+    public ActionResult Create([Bind(Include = "Id,Title,Body,CategoryName")] Article article)
+    public ActionResult Search([Bind(Include = "Kana")] SearchViewModel model)
+
+    public ActionResult Edit(int? id)
+
++++++++++++++++++++++
+Search
+++++++++++++++++++++
+      public ActionResult Search([Bind(Include = "Kana")] SearchViewModel model)
+      {
+          if (!string.IsNullOrEmpty(model.Kana))
+          {
+              var list = db.Addresses.Where(item => item.Kana.IndexOf(model.Kana) == 0).ToList();
+              model.Addresses = list;
+          }
+          else
+          {
+              model.Addresses = db.Addresses.ToList();
+          }
+
+          return View(model);
+      }
+
++++++++++++++++++++++
+Index
+++++++++++++++++++++
+        public ActionResult Index()
+        {
+            var addresses = db.Addresses.Include(a => a.Group);//グループがリンクされたもの？？自動でこうなっている
+            return View(addresses.ToList());
+        }
+
++++++++++++++++++++++
+base
+++++++++++++++++++++
+
+private MvcBasicContext db = new MvcBasicContext();
+
+      public BeginController()
+      {
+        db.Database.Log = sql =>
+        {
+          Debug.Write(sql);
+        };
+      }
+      // GET: Begin
+      public ActionResult Index()
+      {
+        return Content("こんにちは、世界！");
+      }
+      public ActionResult Show()
+      {
+          ViewBag.Message = "こんにちは、世界！";
+          return View();
+      }
+      public ActionResult List()
+      {
+        return View(db.Members);
+      }
+
++++++++++++++++++++++
+base
+++++++++++++++++++++
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                db.Dispose();
+            }
+            base.Dispose(disposing);
+        }
++++++++++++++++++++++
+rss出力
+++++++++++++++++++++
+ public ActionResult Rss()
+    {
+      var contents = (from c in db.Articles
+              orderby c.Published descending
+              select c).Take(15).ToList();
+      var rss = new XDocument(
+              new XDeclaration("1.0", "UTF-8", "yes"),
+              new XElement(
+                  "rss",
+                  new XAttribute("version", "2.0"),
+                  new XElement("channel",
+                      new XElement("title", "サーバサイド技術の学び舎"),
+                      new XElement("link", "http://www.wings.msn.to/"),
+                      new XElement("description", "サーバ関連の記事情報"),
+                      new XElement("image",
+                          new XElement("url", "http://www.wings.msn.to/image/wings.jpg"),
+                          new XElement("link", "http://www.wings.msn.to/"),
+                          new XElement("title", "サーバサイド技術の学び舎")
+                      ),
+                      from c in contents
+                      select
+                      new XElement("item",
+                          new XElement("title", c.Title),
+                          new XElement("link", c.Url),
+                          new XElement("description", c.Description),
+                          new XElement("category", c.Category),
+                          new XElement("viewcount", c.Viewcount),
+                          new XElement("pubDate", c.Published.ToUniversalTime().ToString("R"))
+                      )
+                  )
+              )
+          );
+      return Content(rss.ToString(), "application/rss+xml");
+    }
+
++++++++++++++++++++++
+ファイル出力
+++++++++++++++++++++
+ public ActionResult Download(int id)
+    {
+      var pic = Server.MapPath(
+          String.Format("~/App_Data/Photos/PIC{0}.jpg", id));
+      if (System.IO.File.Exists(pic))
+      {
+        return File(pic, "image/jpeg", "download.jpg");
+      }
+      return HttpNotFound("File does not exist.");
+    }
+
++++++++++++++++++++++
+バイナリデータを取得し出力
+++++++++++++++++++++
+    public ActionResult Image(int id)
+    {
+      var img = (from i in db.Images
+                 where i.Id == id
+                 select i).FirstOrDefault();
+      return File(img.Data, img.Ctype, img.Name);
+    }
++++++++++++++++++++++
+PDF出力
+++++++++++++++++++++
+    public ActionResult Pdf()
+    {
+      var stream = new MemoryStream();
+      var doc = new Document();
+      var writer = PdfWriter.GetInstance(doc, stream);
+      //Response.ContentType="application/pdf";
+      //var writer = PdfWriter.GetInstance(doc, Response.OutputStream);
+      doc.Open();
+      Font fnt = new Font(BaseFont.CreateFont("c:/windows/fonts/msgothic.ttc, 1", BaseFont.IDENTITY_H, true), 18, Font.BOLD);
+      doc.Add(new Paragraph("こんにちは、世界！", fnt));
+      doc.Close();
+      return File(stream.ToArray(), "application/pdf", "sample.pdf");
+      //return new EmptyResult();
+    }
++++++++++++++++++++++
+セッション
+++++++++++++++++++++
+
+    //[SessionState(SessionStateBehavior.Disabled)]<---　特定のコントローラーでセッションを無効かできる
+
+      public ActionResult Cookie()
+      {
+        if (Request.Cookies["email"] != null) 
+        {         
+          ViewBag.Email = Request.Cookies["email"].Value;
+        }
+        return View();
+      }
+
+      [HttpPost]
+      public ActionResult Cookie(string email)
+      {
+        Response.AppendCookie(new HttpCookie("email")
+        {
+          Value = email,
+          Expires = DateTime.Now.AddDays(7),
+          HttpOnly = true
+        });
+        return RedirectToAction("Cookie");
+      }
+
+      public ActionResult SessionRecord()
+      {
+        ViewBag.Email = Session["email"];
+        return View();
+      }
+
+      [HttpPost]
+      public ActionResult SessionRecord(string email)
+      {
+        Session["email"] = email;
+        return RedirectToAction("SessionRecord");
+      }
+
+外部保存
+・sqlserver
+・Azure Redis
+
++++++++++++++++++++++
+フィルター属性　カスタムエラーページ
+++++++++++++++++++++
+　
+      [HandleError]　＜－－　カスタムエラーページを有効　
+
+■web.configのcustomErrorsも修正必要
+
+    <customErrors mode="RemoteOnly">
+    </customErrors>
+
+■App_start\FilterCo\nfig.アプリケーションレベルの共通フィルター設定はcsで設定
+
+			filters.Add(new HandleErrorAttribute());
+
+■views/Shared/Error.cshtml
+
+<h2 class="text-danger">要求の処理中にエラーが発生しました。</h2>
+
+<table class="table">
+  <tr>
+    <th>発生元</th>
+    <td>@Model.ControllerName ／ @Model.ActionName</td>
+  </tr>
+  <tr>
+    <th>例外</th>
+    <td>@Model.Exception.GetType().Name</td>
+  </tr>
+  <tr>
+    <th>メッセージ</th>
+    <td>@Model.Exception.Message</td>
+  </tr>
+</table>
+
++++++++++++++++++++++
+フィルター属性　キャッシュ
+++++++++++++++++++++
+        [OutputCache(Duration = 600)]
+        public ActionResult Hello()
+        {
+            return View();
+        }
+        //[OutputCache(CacheProfile = "MyPolicy")]
+
++++++++++++++++++++++
+フィルター属性　入力の妥当性
+++++++++++++++++++++
+
+        [HttpPost]
+
+        //[ValidateInput(false)]　検証を無効にする、デフォルトは有効true
+
+
++++++++++++++++++++++
+フィルター属性　クロスサイトリクエストフォージェリ
+++++++++++++++++++++
+        [ValidateAntiForgeryToken]
+
+クッキーと隠しフィールドにトークンセット
+
++++++++++++++++++++++
+フィルター属性　Https
++++++++++++++++++++++
+
+        //[RequireHttps]
+
++++++++++++++++++++++
+フィルター属性　自作
++++++++++++++++++++++
+TimeLimitAttribute
+	ある期間だけアクセスを認める　ｐ342承認フィルター
+
+LoggingErrorAttribute
+	例外発生時のログ記録　ｐ346　例外フィルター
+
+LoggingAttribute
+	アクセス記録　ｐ348　アクション／結果フィルター
+
++++++++++++++++++++++
+セレクター属性　
++++++++++++++++++++++
+アクションメソッドに影響を与える
+
+[HttpPut]
+
+@Html.HttpMethodOverride(HttpVerbs.Put)
+
+
+		[NonAction]　アクションメソッドを無効か、一時的に非公開
+    public ActionResult About()
+
+    [ActionName("Hello-Message")]　　アクションメソッド名を変える
+    public ActionResult About()
+    {
+

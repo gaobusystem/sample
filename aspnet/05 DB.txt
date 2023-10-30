@@ -1,0 +1,166 @@
++++++++++++++++++++++
+model
++++++++++++++++++++
+todo追加　単数系
+
+コンテキストクラス作成
+
+TodoesContext:DbContextで以下のように定義すると、自動でテーブル作成される
+
+        public DbSet<Todo> Todoes { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<Role> Roles { get; set; }
+
++++++++++++++++++++++
+db
+++++++++++++++++++++
+C:\Users\takab>sqllocaldb i
+MSSQLLocalDB
+
+サーバ名　(localdb)\MSSQLLocalDB
+TodoApp.Models.TodoesContext
+
++++++++++++++++++++++
+モデル定義例
+++++++++++++++++++++
+[NotMapped] てーぶるにはとうろくされｎあい
+
+        public int Id { get; set; }
+
+        [Required]
+        [Index(IsUnique = true)]
+        [StringLength(256)]
+        [DisplayName("ユーザー名")]
+        public string UserName { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        [DisplayName("パスワード")]
+        public string Password { get; set; }
+
+        public virtual ICollection<Role> Roles { get; set; }//ナビゲーションプロパティ
+
+        [NotMapped]
+        [DisplayName("ロール")]
+        public List<int> RoleIds { get; set; } 
+
+        public virtual ICollection<Todo> Todoes { get; set; }
+
+        public List<Address> Addresses { get; set; }
+
+
+        [DisplayName("カナ")]
+        [Required]
+        [RegularExpression(@"[ァ-ヶ]+")]
+        public string Kana { get; set; }
+
+        [DisplayName("郵便番号")]
+        [RegularExpression(@"[0-9]+")]
+        [StringLength(7)]
+        public string ZipCode { get; set; }
+
+        [DisplayName("都道府県")]
+        public string Prefecture { get; set; }
+
+        [DisplayName("住所")]
+        public string StreetAddress { get; set; }
+
+        [DisplayName("電話番号")]
+        [RegularExpression(@"[0-9]+")]
+        [StringLength(11)]
+        public string Telephone { get; set; }
+
+        [DisplayName("メール")]
+        [DataType(DataType.EmailAddress)]
+        public string Mail { get; set; }
++++++++++++++++++++++
+マイグレーション
+++++++++++++++++++++
+ツール >> nugetパッケージマネージャー >> コンソール
+
+pm> Enable-Migrations -EnableAutomaticMigrations
+Checking if the context targets an existing database...
+Code First Migrations enabled for project todoApp.
+
+*Migrationフォルダが作成される
+
+pm> Enable-Migrations -ContextTypeName MyBlogApp.Models.BlogContext
+
+Update-Database
+
+
+        public Configuration()
+        {
+            // 自動マイグレーションの有効化
+            AutomaticMigrationsEnabled = true;
+            // データロスを伴う更新を許可
+            AutomaticMigrationDataLossAllowed = true;
+            ContextKey = "WebApplication1.Models.SampleContext";
+        }
+
+
+
+
+MSSQLLocalDB
+MyBlogApp.Models.BlogContext
+
+サーバ名
+(local)\sqlexpress
+(localdb)\MSSQLLocalDB
+
+・SQLサーバにDB作成（正解）
+  <entityFramework>
+    <providers>
+      <provider invariantName="System.Data.SqlClient" type="System.Data.Entity.SqlServer.SqlProviderServices, EntityFramework.SqlServer" />
+    </providers>
+    <defaultConnectionFactory type="System.Data.Entity.Infrastructure.SqlConnectionFactory, EntityFramework" />
+  </entityFramework>
+
++++++++++++++++++++++
+クエリ式
+++++++++++++++++++++
+  public ActionResult Index()
+  {
+      var items = from s in db.Articles
+                  orderby s.Modified descending, s.Title
+                  select s;
+      return View(items);
+
+		var list = db.Addresses.Where(item => item.Kana.IndexOf(model.Kana) == 0).ToList();
+
+
+    // DBからカテゴリーを取得
+    var category = db.Categories
+        .Where(item => item.CategoryName.Equals(article.CategoryName))
+        .FirstOrDefault();
+
+    if (category == null)
+    {
+        // カテゴリーを登録
+        category = new Category()
+        {
+            CategoryName = article.CategoryName,
+            Count = 1
+        };
+        db.Categories.Add(category);
+    }
+    else
+    {
+        // カテゴリーを更新
+        category.Count++;
+        db.Entry(category).State = EntityState.Modified;
+    }
+
+    db.Entry(dbArticle).State = EntityState.Modified;
+    db.SaveChanges();//トランザクション処理か？？？
+
++++++++++++++++++++++
+SelectList
+++++++++++++++++++++
+        public ActionResult Create()
+        {
+            ViewBag.Group_Id = new SelectList(db.Groups, "Id", "Name");
+            return View();
+        }
+
+

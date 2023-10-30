@@ -1,0 +1,227 @@
+ページのちらつきを抑えられる
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ページを部分更新する -- PartialViewResultクラス
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+<h2>AjaxLink</h2>
+
+<div class="btn-group">
+  @foreach (var item in Model)
+{
+  <button type="button" class="btn btn-info btn-search"
+    data-category="@item.Value">@item.Text</button>
+}
+</div>
+<div id="result"></div>
+
+@section scripts {
+  <script>
+    $(function(){
+      $('.btn-search').click(function (e) {
+        $('#result').load('/Ajax/AjaxSearch/' + $(this).data('category'));
+      });
+    });
+  </script>
+}
+
+
+    public ActionResult AjaxLink()
+    {
+      var list = EnumHelper.GetSelectList(typeof(CategoryEnum));
+      return View(list);
+    }
+  
+    public ActionResult AjaxSearch(CategoryEnum id)	
+    {
+      if (Request.IsAjaxRequest()){
+        var articles = db.Articles
+            .Where(a => a.Category == id)
+            .OrderBy(a => a.Published);
+        return PartialView("_AjaxSearch", articles);  <==========
+      }
+      return Content("Ajax通信以外のアクセスはできません。");
+    }
+
+_AjaxSearch.cshtml----
+
+<table class="table">
+  <tr>
+    <th>@Html.DisplayNameFor(model => model.Url)</th>
+    <th>@Html.DisplayNameFor(model => model.Title)</th>
+    <th>@Html.DisplayNameFor(model => model.Published)</th>
+  </tr>
+  @foreach (var item in Model) {
+    <tr>
+      <td>@Html.DisplayFor(modelItem => item.Url)</td>
+      <td>@Html.DisplayFor(modelItem => item.Title)</td>
+      <td>@Html.DisplayFor(modelItem => item.Published)</td>
+    </tr>
+  }
+</table>
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ぐるなび
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        public ActionResult GourmetResult(string keyword)
+        {
+          System.Threading.Thread.Sleep(3000);
+          if (Request.IsAjaxRequest()){
+            var keyid = "b5e1f8xxxxxxxxxxxxxxxxx21005b2";
+            var prefid = "PREF13";
+            var doc = XElement.Load(
+                String.Format("http://api.gnavi.co.jp/ver1/RestSearchAPI/?keyid={0}&name={1}&pref={2}&offset_page={3}",
+                    keyid, Url.Encode(keyword), prefid, 1));
+            ViewBag.Count = Int32.Parse(doc.Element("total_hit_count").Value);
+            return PartialView("_GourmetResult", from r in doc.Elements("rest")
+            //return Json(from r in doc.Elements("rest")
+
+                select new Restaurant()
+                {
+                    Id = r.Element("id").Value,
+                    Name = r.Element("name").Value,
+                    Url = r.Element("url").Value,
+                    Image = r.Element("image_url").Element("qrcode").Value,
+                    Pr = r.Element("pr").Element("pr_long").Value
+                }
+            );
+          }
+          return Content("Ajax通信以外のアクセスはできません。");
+        }
+
+<h2>GourmetSearch</h2>
+
+<form>
+  <label for="keyword">キーワード：</label>
+  <input id="keyword" name="keyword" type="text" size="15" />
+  <input id="search" type="button" value="検索" />
+</form>
+<img id="progress" src="~/Content/ajax-loader.gif" style="display:none;" />
+<div id="result"></div>
+
+@section scripts {
+<script>
+$(function () {
+  $(document)
+    .ajaxStart(function () {
+      $('#progress').show();
+    })
+    .ajaxComplete(function () {
+      $('#progress').hide();
+    });
+  $('#search').click(function () {
+    $('#result').load('/Ajax/GourmetResult',
+      { keyword: $('#keyword').val() });
+  });
+});
+</script>
+}
+
+_GourmetResult.cshtml---
+
+<div>検索結果：@ViewBag.Count 件</div>
+
+<table class="table">
+  @foreach (var rest in Model)
+  {
+    <tr>
+      <th>
+        <img src="@rest.Image)" alt="グルメ情報検索サイト ぐるなび" />
+      </th>
+      <td>
+        <h5><a href="@rest.Url">@rest.Name.Replace("<br>", "")</a></h5>
+        <p>@rest.Pr</p>
+      </td>
+    </tr>
+  }
+</table>
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+進捗バー
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+<img id="progress" src="~/Content/ajax-loader.gif" style="display:none;" />
+<div id="result"></div>
+
+
+@section scripts {
+<script>
+$(function () {
+  $(document)
+    .ajaxStart(function () {
+      $('#progress').show();
+    })
+    .ajaxComplete(function () {
+      $('#progress').hide();
+    });
+  $('#search').click(function () {
+    $('#result').load('/Ajax/GourmetResult',
+      { keyword: $('#keyword').val() });
+  });
+});
+</script>
+}
+
+        public ActionResult GourmetResult(string keyword)
+        {
+          System.Threading.Thread.Sleep(3000);
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ASP.NET Web API プロジェクト作成
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+・・・・・・・
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Jsonデータ
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+<h2>JsonAccess</h2>
+
+<div class="btn-group">
+  @foreach (var item in Model)
+  {
+    <button type="button" class="btn btn-info btn-search"
+        data-category="@item.Value">
+      @item.Text
+    </button>
+  }
+</div>
+<table class="table">
+  <thead>
+    <tr>
+      <th>URL</th>
+      <th>タイトル</th>
+      <th>刊行日</th>
+    </tr>
+  </thead>
+  <tbody id="result"></tbody>
+</table>
+
+@section scripts {
+<script>
+$(function() {
+  $('.btn-search').click(function (e) {
+    $.getJSON('/api/Articles/' + $(this).data('category'))
+      .done(function (data) {
+        $('#result').empty();
+        $.each(data, function () {
+          $('#result').append(
+            $('<tr></tr>')
+              .append($('<td></td>').html(this.Url))
+              .append($('<td></td>').html(this.Title))
+              .append($('<td></td>').html(this.Published))
+          );
+        });
+      })
+      .fail(function(xhr, status, error) {
+        window.alert('エラー発生：' + error);
+      });
+  });
+});
+</script>
+}
+
+        public ActionResult JsonAccess()
+        {
+          var list = EnumHelper.GetSelectList(typeof(CategoryEnum));
+          return View(list);
+        }
+
